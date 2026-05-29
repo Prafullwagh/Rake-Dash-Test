@@ -1,0 +1,199 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Final Dashboard with Color-Coded Charts</title>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <style>
+        :root {
+            --primary-color: #0d6efd; --secondary-color: #6c757d; --success-color: #198754; --info-color: #0dcaf0;
+            --warning-color: #ffc107; --danger-color: #dc3545; --light-bg: #f8f9fa; --white-bg: #ffffff;
+            --font-color: #212529; --border-color: #dee2e6;
+        }
+        body {
+            font-family: 'Segoe UI', system-ui, -apple-system, BlinkMacSystemFont, sans-serif; margin: 0; padding: 20px;
+            background-color: var(--light-bg); color: var(--font-color);
+        }
+        .container { max-width: 1800px; margin: auto; background: var(--white-bg); padding: 25px; border-radius: 12px; box-shadow: 0 4px 20px rgba(0,0,0,0.05); }
+        .header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 20px; margin-bottom: 25px; }
+        .header h1 { color: var(--primary-color); margin: 0; font-size: 2.2rem; }
+        .tabs { display: flex; border-bottom: 2px solid var(--border-color); margin-bottom: 25px; }
+        .tab-link { padding: 12px 25px; cursor: pointer; border: none; background: none; font-size: 1.1rem; font-weight: 500; color: var(--secondary-color); transition: all 0.2s ease-in-out; }
+        .tab-link.active, .tab-link:hover { color: var(--primary-color); border-bottom: 3px solid var(--primary-color); }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; animation: fadeIn 0.5s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        .grid-container { display: grid; grid-template-columns: repeat(auto-fit, minmax(350px, 1fr)); gap: 25px; }
+        .card { background-color: var(--white-bg); padding: 25px; border-radius: 10px; border: 1px solid var(--border-color); box-shadow: 0 2px 8px rgba(0,0,0,0.05); transition: transform 0.2s, box-shadow 0.2s; display: flex; flex-direction: column; }
+        .card:hover { transform: translateY(-5px); box-shadow: 0 8px 16px rgba(0,0,0,0.1); }
+        .card-header { display: flex; justify-content: space-between; align-items: center; margin-bottom: 20px; }
+        .card h3 { margin: 0; font-size: 1.3rem; color: #343a40; display: flex; align-items: center; }
+        .card h3 i { margin-right: 12px; color: var(--primary-color); }
+        .chart-toggle, .filter-select { display: flex; gap: 5px; }
+        .toggle-btn { background: #e9ecef; border: 1px solid #dee2e6; border-radius: 5px; padding: 5px 10px; cursor: pointer; font-size: 0.8rem; }
+        .toggle-btn.active { background: var(--primary-color); color: white; border-color: var(--primary-color); }
+        .filter-select { padding: 5px 8px; border-radius: 5px; border: 1px solid var(--border-color); background-color: #fff; font-size: 0.9rem; }
+        .kpi-group { display: flex; justify-content: space-around; text-align: center; margin-top: 15px; width: 100%;}
+        .kpi { flex: 1; }
+        .kpi .value { font-size: 2rem; font-weight: 600; color: var(--font-color); }
+        .kpi .label { font-size: 0.9rem; color: var(--secondary-color); }
+        .progress-bar-container { width: 100%; background-color: #e9ecef; border-radius: 8px; margin-top: 20px; overflow: hidden; }
+        .progress-bar { height: 25px; line-height: 25px; color: white; text-align: center; font-weight: bold; background-color: var(--warning-color); border-radius: 8px; white-space: nowrap; padding: 0 10px; transition: width 0.5s ease-out, background-color 0.5s ease-out; }
+        table { width: 100%; border-collapse: collapse; margin-top: 20px; }
+        th, td { text-align: left; padding: 14px; border-bottom: 1px solid var(--border-color); }
+        th { background-color: var(--light-bg); font-weight: 600; }
+        .modal { display: none; position: fixed; z-index: 1000; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.5); animation: fadeIn 0.3s; }
+        .modal-content { background-color: #fefefe; margin: 8% auto; padding: 30px; border: 1px solid #888; width: 80%; max-width: 1200px; border-radius: 12px; box-shadow: 0 5px 25px rgba(0,0,0,0.2); }
+        .modal-header { display: flex; justify-content: space-between; align-items: center; border-bottom: 1px solid var(--border-color); padding-bottom: 15px; margin-bottom: 20px; }
+        .modal-header h2 { margin: 0; color: var(--primary-color); }
+        .close-button { color: #aaa; font-size: 28px; font-weight: bold; cursor: pointer; }
+        .modal-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(220px, 1fr)); gap: 20px; }
+        .modal-kpi { background: var(--light-bg); padding: 15px; border-radius: 8px; text-align: center; }
+        .modal-kpi .label { font-size: 0.9rem; color: var(--secondary-color); margin-bottom: 8px; }
+        .modal-kpi .value { font-size: 1.8rem; font-weight: 600; color: var(--primary-color); }
+    </style>
+</head>
+<body>
+
+<div class="container">
+    <div class="header"><h1>Final Interactive Logistics Dashboard</h1></div>
+    <div class="tabs">
+        <button class="tab-link active" onclick="openTab(event, 'performance')"><i class="fa-solid fa-chart-pie"></i> Overall Performance</button>
+        <button class="tab-link" onclick="openTab(event, 'rail')"><i class="fa-solid fa-train-tram"></i> Rail Operations</button>
+        <button class="tab-link" onclick="openTab(event, 'road')"><i class="fa-solid fa-truck-fast"></i> Road Logistics</button>
+    </div>
+
+    <div id="performance" class="tab-content active">
+        <div class="grid-container">
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-calendar-day"></i>MTD Performance</h3>
+                    <div class="chart-toggle">
+                        <button id="mtd-doughnut-btn" class="toggle-btn active" onclick="toggleChartType('mtd', 'doughnut')"><i class="fa-solid fa-chart-pie"></i></button>
+                        <button id="mtd-bar-btn" class="toggle-btn" onclick="toggleChartType('mtd', 'bar')"><i class="fa-solid fa-chart-column"></i></button>
+                    </div>
+                </div>
+                <canvas id="mtdChart"></canvas>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-calendar-week"></i>YTD Performance</h3>
+                    <div class="chart-toggle">
+                        <button id="ytd-doughnut-btn" class="toggle-btn active" onclick="toggleChartType('ytd', 'doughnut')"><i class="fa-solid fa-chart-pie"></i></button>
+                        <button id="ytd-bar-btn" class="toggle-btn" onclick="toggleChartType('ytd', 'bar')"><i class="fa-solid fa-chart-column"></i></button>
+                    </div>
+                </div>
+                <canvas id="ytdChart"></canvas>
+            </div>
+            <div class="card">
+                <div class="card-header">
+                    <h3><i class="fa-solid fa-shipping-fast"></i>72hr Operations Forecast</h3>
+                    <select id="terminal-filter" class="filter-select" onchange="updateForecast()">
+                        <option value="all">All Terminals</option>
+                        <option value="mundra">Mundra</option>
+                        <option value="jnpt">JNPT</option>
+                        <option value="pipavav">Pipavav</option>
+                    </select>
+                </div>
+                <div class="kpi-group">
+                    <div class="kpi">
+                        <div class="value" id="forecast-budget">4,000</div>
+                        <div class="label">Budgeted Volume</div>
+                    </div>
+                    <div class="kpi">
+                        <div class="value" id="forecast-actual">3,850</div>
+                        <div class="label">Forecasted Volume</div>
+                    </div>
+                </div>
+                <div class="progress-bar-container">
+                    <div id="forecast-progress-bar" class="progress-bar">96% of Budget</div>
+                </div>
+                <div id="forecast-summary-text" style="text-align: center; margin-top: 15px; color: var(--secondary-color); font-size: 0.9rem;">
+                    Forecast is on track to meet 96% of the 72hr budget.
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div id="rail" class="tab-content">
+        <div class="grid-container" style="grid-template-columns: 2fr 1fr;">
+             <div class="card">
+                <h3><i class="fa-solid fa-hourglass-half"></i>72-Hour Rake & Inventory Plan</h3>
+                <table>
+                    <thead><tr><th>Metric</th><th>Today</th><th>Today + 1</th><th>Today + 2</th></tr></thead>
+                    <tbody>
+                        <tr><td>Inventory (TEUs)</td><td>1,500</td><td>1,800</td><td>2,100</td></tr>
+                        <tr><td>Rakes Required</td><td>10</td><td>12</td><td>15</td></tr>
+                        <tr><td>Rakes Available</td><td>8</td><td>10</td><td>13</td></tr>
+                        <tr><td>Rakes Holding</td><td>2</td><td>2</td><td>2</td></tr>
+                        <tr><td>Details</td><td colspan="3"><span class="drill-through" onclick="showModal('rail_planning')">View Planning Details</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i>Historical Rail Performance</h3>
+                 <canvas id="railHistoryChart"></canvas>
+                 <div style="text-align:center; margin-top:15px;"><span class="drill-through" onclick="showModal('rail_historical')">View Historical Details</span></div>
+            </div>
+        </div>
+    </div>
+
+    <div id="road" class="tab-content">
+        <div class="grid-container" style="grid-template-columns: 2fr 1fr;">
+             <div class="card">
+                <h3><i class="fa-solid fa-hourglass-half"></i>72-Hour Vehicle & Indent Plan</h3>
+                <table>
+                    <thead><tr><th>Metric</th><th>Today</th><th>Today + 1</th><th>Today + 2</th></tr></thead>
+                    <tbody>
+                        <tr><td>Indent (Containers)</td><td>800</td><td>950</td><td>1100</td></tr>
+                        <tr><td>Vehicles Required</td><td>50</td><td>60</td><td>70</td></tr>
+                        <tr><td>Vehicles Available</td><td>45</td><td>55</td><td>68</td></tr>
+                        <tr><td>Vehicles Holding</td><td>5</td><td>5</td><td>2</td></tr>
+                        <tr><td>Details</td><td colspan="3"><span class="drill-through" onclick="showModal('road_planning')">View Planning Details</span></td></tr>
+                    </tbody>
+                </table>
+            </div>
+            <div class="card">
+                <h3><i class="fa-solid fa-clock-rotate-left"></i>Historical Vehicle Performance</h3>
+                <canvas id="roadHistoryChart"></canvas>
+                <div style="text-align:center; margin-top:15px;"><span class="drill-through" onclick="showModal('road_historical')">View Historical Details</span></div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<div id="detailModal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modalTitle"></h2>
+            <span class="close-button" onclick="closeModal()">&times;</span>
+        </div>
+        <div id="modalBody" class="modal-grid"></div>
+    </div>
+</div>
+
+<script>
+    const drillDownDetails = {
+        rail_planning: { title: "Rail Operations Planning Details", data: { "Inventory Profile": "1,500 TEUs", "Rake Capacity": "90 TEUs/Rake", "Load Factor": "95%", "Rail TAT": "48 Hours", "Terminal TAT": "12 Hours", "Double-Stack Potential": "65%", "40' Container Demand": "600", "20' Container Demand": "300", "Pipeline Rakes (In-transit)": "18", "Key Bottleneck": "Kanpur Route" } },
+        rail_historical: { title: "Historical Rail Performance Details", data: { "On-Time Performance": "88%", "Avg. Speed (KMPH)": "52", "Terminal Dwell Time": "14.5 Hours", "Avg. Load Factor": "92%", "Peak Rail TAT": "55 Hours", "Utilization %": "85%", "Avg Inventory": "1,350 TEUs", "Avg Rake Evacuated": "9/day" } },
+        road_planning: { title: "Road Logistics Planning Details", data: { "Indent Profile": "800 Containers", "Vehicle Availability": "90%", "Vehicle Holding": "5 Vehicles", "Vehicle Idle": "2 Vehicles", "Transit TAT": "24 Hours", "Factory TAT": "4 Hours", "Terminal TAT (Vehicle)": "2 Hours", "Required Vehicle Types": "Trailers, 20ft", "Driver Availability": "95%", "High-Priority Routes": "NH-48, NH-8", "Expected Wait (Factory)": "1.5 Hours" } },
+        road_historical: { title: "Historical Road Logistics Details", data: { "On-Time Delivery %": "94%", "Avg Fuel Efficiency": "4.2 KMPL", "Avg Terminal Turnaround": "2.5 Hours", "Incident Rate": "0.1%", "Avg. Indent": "776", "Avg Vehicle Required": "49/day", "Peak Transit TAT": "30 Hours", "Avg Factory TAT": "4.5 Hours" } }
+    };
+    const chartData = { mtd: { labels: ['Actual', 'Budget'], values: [39443, 64559] }, ytd: { labels: ['Actual', 'Budget'], values: [87929, 139864] }, railHistory: { labels: ['Today-2', 'Today-1', 'Today'], datasets: [{ label: 'Inventory (TEUs)', data: [1200, 1350, 1500], backgroundColor: 'rgba(54, 162, 235, 0.6)' }, { label: 'Rakes Evacuated', data: [8, 9, 10], backgroundColor: 'rgba(75, 192, 192, 0.6)' }] }, roadHistory: { labels: ['Today-2', 'Today-1', 'Today'], datasets: [{ label: 'Indents', data: [750, 780, 800], backgroundColor: 'rgba(255, 159, 64, 0.6)' }, { label: 'Vehicles Available', data: [46, 47, 45], backgroundColor: 'rgba(153, 102, 255, 0.6)' }] } };
+    let chartInstances = {};
+    function openTab(evt, tabName) { document.querySelectorAll('.tab-content').forEach(tc => tc.style.display = "none"); document.querySelectorAll('.tab-link').forEach(tl => tl.classList.remove("active")); document.getElementById(tabName).style.display = "block"; evt.currentTarget.classList.add("active"); }
+    const modal = document.getElementById('detailModal'), modalTitle = document.getElementById('modalTitle'), modalBody = document.getElementById('modalBody');
+    function showModal(dataType) { const details = drillDownDetails[dataType]; modalTitle.textContent = details.title; modalBody.innerHTML = ''; for (const [key, value] of Object.entries(details.data)) { modalBody.innerHTML += `<div class="modal-kpi"><div class="label">${key}</div><div class="value">${value}</div></div>`; } modal.style.display = "block"; }
+    function closeModal() { modal.style.display = "none"; }
+    window.onclick = (event) => { if (event.target == modal) closeModal(); };
+    function createChart(id, type, data, options) { const ctx = document.getElementById(id).getContext('2d'); if (chartInstances[id]) chartInstances[id].destroy(); chartInstances[id] = new Chart(ctx, { type, data, options }); }
+    function getChartConfig(chartId) { const d = chartData[chartId]; const doughnutData = { labels: ['Actual', 'Remaining'], datasets: [{ data: [d.values[0], d.values[1] - d.values[0]], backgroundColor: ['var(--success-color)', 'var(--danger-color)'], hoverOffset: 8 }] }; const barData = { labels: d.labels, datasets: [{ label: 'Value', data: d.values, backgroundColor: ['var(--success-color)', 'var(--secondary-color)'], borderWidth: 1 }] }; const options = { responsive: true, onClick: (event, elements) => { if (elements.length > 0 && elements[0].index === 0) showModal(chartId === 'mtd' ? 'rail_historical' : 'road_historical'); }, plugins: { legend: { display: (chartId.includes('History') ? true : (chartInstances[`${chartId}Chart`] ? chartInstances[`${chartId}Chart`].config.type === 'doughnut' : true)), position: 'top' }, tooltip: { callbacks: { label: (c) => `${c.label}: ${c.raw.toLocaleString()}` } } } }; return { doughnutData, barData, options }; }
+    function toggleChartType(chartId, type) { const { doughnutData, barData, options } = getChartConfig(chartId); const data = (type === 'doughnut') ? doughnutData : barData; createChart(`${chartId}Chart`, type, data, options); document.getElementById(`${chartId}-doughnut-btn`).classList.toggle('active', type === 'doughnut'); document.getElementById(`${chartId}-bar-btn`).classList.toggle('active', type === 'bar'); }
+    const forecastData = { all: { budget: 4000, forecast: 3850 }, mundra: { budget: 1800, forecast: 1820 }, jnpt: { budget: 1200, forecast: 1100 }, pipavav: { budget: 1000, forecast: 930 } };
+    function updateForecast() { const selectedTerminal = document.getElementById('terminal-filter').value; const data = forecastData[selectedTerminal]; const budgetEl = document.getElementById('forecast-budget'); const actualEl = document.getElementById('forecast-actual'); const progressBar = document.getElementById('forecast-progress-bar'); const summaryText = document.getElementById('forecast-summary-text'); const achievement = (data.budget > 0) ? Math.round((data.forecast / data.budget) * 100) : 0; budgetEl.innerText = data.budget.toLocaleString(); actualEl.innerText = data.forecast.toLocaleString(); progressBar.style.width = Math.min(achievement, 100) + '%'; progressBar.innerText = achievement + '% of Budget'; if (achievement >= 100) { progressBar.style.backgroundColor = 'var(--success-color)'; summaryText.innerText = `On track to exceed budget by ${achievement - 100}%.`; } else if (achievement >= 95) { progressBar.style.backgroundColor = 'var(--warning-color)'; summaryText.innerText = `Forecast is on track to meet ${achievement}% of the 72hr budget.`; } else { progressBar.style.backgroundColor = 'var(--danger-color)'; summaryText.innerText = `Action required: Forecast is currently at ${achievement}% of budget.`; } }
+    document.addEventListener('DOMContentLoaded', () => { toggleChartType('mtd', 'doughnut'); toggleChartType('ytd', 'doughnut'); createChart('railHistoryChart', 'bar', chartData.railHistory, { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }); createChart('roadHistoryChart', 'bar', chartData.roadHistory, { responsive: true, plugins: { legend: { position: 'bottom' } }, scales: { y: { beginAtZero: true } } }); updateForecast(); });
+</script>
+</body>
+</html>
